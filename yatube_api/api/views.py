@@ -1,1 +1,67 @@
-# TODO:  Напишите свой вариант
+from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
+from rest_framework import (
+    viewsets, permissions, filters, mixins, pagination
+)
+
+from .permissions import IsAuthorOrReadOnly
+from .serializers import (
+    PostSerializer, CommentSerializer, GroupSerializer, FollowSerializer
+)
+from posts.models import Post, Group
+
+User = get_user_model()
+
+
+class PostViewSet(viewsets.ModelViewSet):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly
+    )
+    pagination_class = pagination.LimitOffsetPagination
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+
+class GroupViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Group.objects.all()
+    serializer_class = GroupSerializer
+
+
+class CommentsViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentSerializer
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly
+    )
+
+    def get_post_obj(self):
+        return get_object_or_404(Post, pk=self.kwargs.get('post_id'))
+
+    def get_queryset(self):
+        post = self.get_post_obj()
+        return post.comments.all()
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user, post=self.get_post_obj())
+
+
+class FollowViewSetBase(viewsets.GenericViewSet,
+                        mixins.ListModelMixin,
+                        mixins.CreateModelMixin):
+    pass
+
+
+class FollowViewSet(FollowViewSetBase):
+    serializer_class = FollowSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('=following__username',)
+
+    def get_queryset(self):
+        user = self.request.user
+        return user.follower.all()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
