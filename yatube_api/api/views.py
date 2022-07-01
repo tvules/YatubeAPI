@@ -4,6 +4,7 @@ from rest_framework import (
     viewsets, permissions, filters, mixins, pagination
 )
 
+from .mixins import FollowViewSetBase
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
     PostSerializer, CommentSerializer, GroupSerializer, FollowSerializer
@@ -47,12 +48,6 @@ class CommentsViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user, post=self.get_post_obj())
 
 
-class FollowViewSetBase(viewsets.GenericViewSet,
-                        mixins.ListModelMixin,
-                        mixins.CreateModelMixin):
-    pass
-
-
 class FollowViewSet(FollowViewSetBase):
     serializer_class = FollowSerializer
     permission_classes = (permissions.IsAuthenticated,)
@@ -60,8 +55,7 @@ class FollowViewSet(FollowViewSetBase):
     search_fields = ('=following__username',)
 
     def get_queryset(self):
-        user = self.request.user
-        return user.follower.all()
+        return self.request.user.follower.all()
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
