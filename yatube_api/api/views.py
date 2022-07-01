@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import (
-    viewsets, permissions, filters, mixins, pagination
+    viewsets, permissions, filters, pagination
 )
 
 from .mixins import FollowViewSetBase
